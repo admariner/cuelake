@@ -67,11 +67,10 @@ class ZeppelinAPI:
         response = self.getNotebookDetails(notebookId)
         if response:
             return response
+        if retryCount < ZEPPELIN_API_RETRY_COUNT:
+            return self.getNotebookDetailsWithRetry(notebookId, retryCount + 1)
         else:
-            if retryCount < ZEPPELIN_API_RETRY_COUNT:
-                return self.getNotebookDetailsWithRetry(notebookId, retryCount + 1)
-            else:
-                return False
+            return False
 
     def runNotebookJob(self, notebookId: str):
         """
@@ -141,8 +140,7 @@ class ZeppelinAPI:
         Renames zeppelin notebook
         """
         response = requests.put(f"{self.ZEPPELIN_ADDR}/{NOTEBOOKS_ENDPOINT}/{notebookId}/rename", json.dumps({"name": newName}))
-        x = self.__parseResponse(response)
-        return x
+        return self.__parseResponse(response)
 
     def restartInterpreter(self, interpreterName: str):
         """

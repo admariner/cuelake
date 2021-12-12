@@ -42,20 +42,19 @@ class KubernetesAPI:
         for label in podLabels:
             if "interpreterSettingName" in label[0] and label[0]["interpreterSettingName"] == "spark" and label[1]=="Running":
                 runningDrivers += 1
-            
+
             if "interpreterSettingName" in label[0] and label[0]["interpreterSettingName"] == "spark" and label[1]=="Pending":
                 pendingDrivers += 1
             if "spark-role" in label[0] and label[0]["spark-role"] == "executor" and label[1]=="Running":
                 runningExecutors += 1
-            
+
             if "spark-role" in label[0] and label[0]["spark-role"] == "executor" and label[1]=="Pending":
                 pendingExecutors += 1
-        data = {"runningDrivers":runningDrivers,
+        return {"runningDrivers":runningDrivers,
                 "pendingDrivers":pendingDrivers,
                 "runningExecutors":runningExecutors,
                 "pendingExecutors":pendingExecutors
                 }
-        return data
 
     def addZeppelinServer(self, podId):
         v1 = client.CoreV1Api()
@@ -76,7 +75,7 @@ class KubernetesAPI:
             v1.delete_namespaced_pod(name=podId, namespace=self.POD_NAMESPACE)
             v1.delete_namespaced_service(name=podId, namespace=self.POD_NAMESPACE)
         except Exception as ex:
-            logger.error(f"Error removing zeppelin server: {podId}. Error: {str(ex)}")
+            logger.error(f'Error removing zeppelin server: {podId}. Error: {ex}')
 
     def getPodStatus(self, podId):
         v1 = client.CoreV1Api()

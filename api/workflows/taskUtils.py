@@ -42,7 +42,7 @@ class TaskUtils:
             step=3,
             timeout=3600*6,
         )
-        logger.info(f"Workflow status : {str(workflowStatus)}")
+        logger.info(f'Workflow status : {workflowStatus}')
 
         if WorkflowRunLogs.objects.get(id=workflowRunLogs.id).status == STATUS_ABORTED:
             return STATUS_ABORTED
@@ -74,12 +74,11 @@ class TaskUtils:
         """
         Returns list of notebook ids in a workflow
         """
-        notebookIds = list(
+        return list(
             WorkflowNotebookMap.objects.filter(workflow_id=workflowId).values_list(
                 "notebookId", flat=True
             )
         )
-        return notebookIds
 
     @staticmethod
     def __getOrCreateWorkflowRun(workflowId: int, taskId: str, workflowRunLogsId: int = None):
@@ -105,7 +104,10 @@ class TaskUtils:
         runningAndQueuedNotebookCount = NotebookRunLogs.objects.filter(id__in=notebookRunLogsIds).exclude(status=NOTEBOOK_STATUS_RUNNING).exclude(status=NOTEBOOK_STATUS_QUEUED).count()
         if (len(notebookRunLogsIds) == runningAndQueuedNotebookCount):
             successfulNotebookCount = NotebookRunLogs.objects.filter(id__in=notebookRunLogsIds, status=NOTEBOOK_STATUS_SUCCESS).count()
-            logger.info(f"Batch completed. Successfull Notebooks : {str(successfulNotebookCount)}. Notebooks in batch: {str(len(notebookRunLogsIds))}")
-            logger.info(f"Notebook Run Status Ids: {str(notebookRunLogsIds)}")
+            logger.info(
+                f'Batch completed. Successfull Notebooks : {successfulNotebookCount}. Notebooks in batch: {len(notebookRunLogsIds)}'
+            )
+
+            logger.info(f'Notebook Run Status Ids: {notebookRunLogsIds}')
             return (len(notebookRunLogsIds) == successfulNotebookCount)
         return "RUNNING"

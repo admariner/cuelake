@@ -30,7 +30,7 @@ def runNotebookJob(notebookId: str, notebookRunLogsId: int = None, runType: str 
     notebookName = notebookId # Initialize notebook name with notebook id
     logger.info(f"Starting notebook job for: {notebookId}")
     taskId = runNotebookJob.request.id # Celery task id
-    taskId = taskId if taskId else ""
+    taskId = taskId or ""
     notebookRunLogs = __getOrCreateNotebookRunLogs(notebookRunLogsId, notebookId, runType, taskId)
     try:
         zeppelinServerId = __allocateZeppelinServer(notebookRunLogs)
@@ -48,7 +48,7 @@ def runNotebookJob(notebookId: str, notebookRunLogsId: int = None, runType: str 
                 )
                 __evaluateScaleDownZeppelin()
             except Exception as ex:
-                logger.error(f"Error occured in notebook {notebookId}. Error: {str(ex)}")
+                logger.error(f'Error occured in notebook {notebookId}. Error: {ex}')
                 notebookRunLogs.status = NOTEBOOK_STATUS_ERROR
                 notebookRunLogs.message = str(ex)
                 notebookRunLogs.endTimestamp = dt.datetime.now()
@@ -62,12 +62,16 @@ def runNotebookJob(notebookId: str, notebookRunLogsId: int = None, runType: str 
             notebookRunLogs.save()
 
     except Exception as ex:
-        logger.error(f"Error occured in notebook {notebookId}. Error: {str(ex)}")
+        logger.error(f'Error occured in notebook {notebookId}. Error: {ex}')
         notebookRunLogs.status=NOTEBOOK_STATUS_ERROR
         notebookRunLogs.message = str(ex)
         notebookRunLogs.endTimestamp = dt.datetime.now()
         notebookRunLogs.save()
-        NotificationServices.notify(notebookName=notebookName if notebookName else notebookId, isSuccess=False, message=str(ex))
+        NotificationServices.notify(
+            notebookName=notebookName or notebookId,
+            isSuccess=False,
+            message=str(ex),
+        )
 
 def __allocateZeppelinServer(notebookRunLogs: NotebookRunLogs):
     """
@@ -83,17 +87,18 @@ def __getZeppelinServerNotebookMap():
     notebookRuns = NotebookRunLogs.objects.filter(status__in=[NOTEBOOK_STATUS_RUNNING, NOTEBOOK_STATUS_QUEUED])
     zeppelinServerNotebookMap = {} # this contains number of running jobs per zeppelinServerId
     for notebookRun in notebookRuns:
-        if notebookRun.zeppelinServerId != "" and notebookRun.zeppelinServerId in zeppelinServerNotebookMap:
-            zeppelinServerNotebookMap[notebookRun.zeppelinServerId] += 1
-        elif notebookRun.zeppelinServerId != "":
-            zeppelinServerNotebookMap[notebookRun.zeppelinServerId] = 1
+        if notebookRun.zeppelinServerId != "":
+            if notebookRun.zeppelinServerId in zeppelinServerNotebookMap:
+                zeppelinServerNotebookMap[notebookRun.zeppelinServerId] += 1
+            else:
+                zeppelinServerNotebookMap[notebookRun.zeppelinServerId] = 1
     return zeppelinServerNotebookMap
 
 def __getOrCreateZeppelinServerId(zeppelinServerMap):
     for zeppelinServerId, runningNotebooks in zeppelinServerMap.items():
         if runningNotebooks < ZEPPELIN_SERVER_CONCURRENCY:
             return zeppelinServerId
-    randomId = uuid.uuid4().hex.lower()[0:20]
+    randomId = uuid.uuid4().hex.lower()[:20]
     zeppelinServerId = ZEPPELIN_JOB_SERVER_PREFIX + randomId
     Kubernetes.addZeppelinServer(zeppelinServerId)
     return zeppelinServerId
@@ -162,16 +167,16 @@ def __rerunNotebook(notebookId: str, zeppelin: ZeppelinAPI):
 
 def __checkIfRetryable(response):
     responseString = json.dumps(response)
-    if "org.apache.zeppelin.interpreter.InterpreterException: java.lang.NullPointerException" in responseString:
-        logger.error(f"Error occured in opening a new interpreter instance. Retrying.")
-        logger.error(f"{responseString}")
-        return True
-    elif "org.apache.zeppelin.spark.SparkSqlInterpreter.internalInterpret(SparkSqlInterpreter.java:80)" in responseString:
-        logger.error(f"Error occured in opening a new interpreter instance. Retrying.")
-        logger.error(f"{responseString}")
-        return True
-    else:
+    if (
+        "org.apache.zeppelin.interpreter.InterpreterException: java.lang.NullPointerException"
+        not in responseString
+        and "org.apache.zeppelin.spark.SparkSqlInterpreter.internalInterpret(SparkSqlInterpreter.java:80)"
+        not in responseString
+    ):
         return False
+    logger.error('Error occured in opening a new interpreter instance. Retrying.')
+    logger.error(f"{responseString}")
+    return True
 
 def __setNotebookStatus(response, notebookRunLogs: NotebookRunLogs):
     """
@@ -194,10 +199,10 @@ def __setNotebookStatus(response, notebookRunLogs: NotebookRunLogs):
 
 def __evaluateScaleDownZeppelin():
     pods = Kubernetes.getPods()
-    zeppelinServerPods = []
-    for pod in pods:
-        if ZEPPELIN_JOB_SERVER_PREFIX in pod.metadata.name:
-            zeppelinServerPods.append(pod)
+    zeppelinServerPods = [
+        pod for pod in pods if ZEPPELIN_JOB_SERVER_PREFIX in pod.metadata.name
+    ]
+
     zeppelinServerNotebookMap = __getZeppelinServerNotebookMap()
     for pod in zeppelinServerPods:
         if pod.metadata.name not in zeppelinServerNotebookMap:

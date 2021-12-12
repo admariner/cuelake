@@ -27,8 +27,8 @@ class WorkflowServices:
         workflows = Workflow.objects.order_by("-id")
         total = workflows.count()
 
-        if(sortColumn):
-            isAscending = True if sortOrder == "ascend" else False
+        if (sortColumn):
+            isAscending = sortOrder == "ascend"
             workflows = WorkflowServices.sortingOnWorkflows(workflows, sortColumn, isAscending)
         data = WorkflowSerializer(workflows[offset : offset+limit], many=True).data
 
@@ -42,17 +42,17 @@ class WorkflowServices:
     @staticmethod
     def sortingOnWorkflows(workflows: List[Workflow], sortColumn: str, isAscending: bool):
         sortPrefix = "" if isAscending else "-"
-        if sortColumn == 'name':
-            workflows = Workflow.objects.all().order_by(sortPrefix + "name")
-        if sortColumn == 'triggerWorkflow':
-            workflows = Workflow.objects.all().order_by(sortPrefix + "triggerWorkflow__name")
-        if sortColumn == "schedule":
-            workflows = Workflow.objects.all().order_by(sortPrefix + "periodictask__crontab__customschedule__name")
         if sortColumn == "lastRunTime":
             workflowRuns = WorkflowRunLogs.objects.all().order_by("workflow_id", "-startTimestamp").distinct("workflow_id").values("workflow_id", "startTimestamp")
             sortedWorkflowRuns = sorted(workflowRuns, key = lambda i: i['startTimestamp'], reverse=isAscending)
             sortedWorkflowIds = [workflowRun["workflow_id"] for workflowRun in sortedWorkflowRuns]
             workflows = Workflow.objects.filter(id__in=sortedWorkflowIds)
+        elif sortColumn == 'name':
+            workflows = Workflow.objects.all().order_by(sortPrefix + "name")
+        elif sortColumn == "schedule":
+            workflows = Workflow.objects.all().order_by(sortPrefix + "periodictask__crontab__customschedule__name")
+        elif sortColumn == 'triggerWorkflow':
+            workflows = Workflow.objects.all().order_by(sortPrefix + "triggerWorkflow__name")
         return workflows
 
 
@@ -141,12 +141,11 @@ class WorkflowServices:
                 )
                 workflow.periodictask = periodictask
                 workflow.save()
-        else:
-            if workflow.periodictask:
-                PeriodicTask.objects.get(id=workflow.periodictask).delete()
-                workflow.periodictask = None
-                workflow.save()
-            
+        elif workflow.periodictask:
+            PeriodicTask.objects.get(id=workflow.periodictask).delete()
+            workflow.periodictask = None
+            workflow.save()
+
         WorkflowNotebookMap.objects.filter(workflow_id=id).delete()
         notebookJobs = [
             WorkflowNotebookMap(workflow_id=id, notebookId=notebookId)
@@ -218,7 +217,7 @@ class WorkflowServices:
         if scheduleId and workflow.periodictask is not None:
             workflow.periodictask.crontab_id=scheduleId
             workflow.periodictask.save()
-        elif scheduleId and workflow.periodictask is None:
+        elif scheduleId:
             periodictask = PeriodicTask.objects.create(
                 crontab_id=scheduleId,
                 name=workflow.name,
