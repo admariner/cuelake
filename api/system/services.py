@@ -24,9 +24,11 @@ class NotificationServices:
             slackWebHookUrl = AccountSettingValue.objects.get(accountSetting__key=ACCOUNT_SETTING_SLACK_URL_KEY).value
             isNotifyOnSuccess = AccountSettingValue.objects.get(accountSetting__key=NOTIFY_ON_SUCCESS_KEY).value == "true"
             isNotifyOnFailure = AccountSettingValue.objects.get(accountSetting__key=NOTIFY_ON_FAILURE_KEY).value == "true"
-            if slackWebHookUrl:
-                if (isNotifyOnFailure and not isSuccess) or (isNotifyOnSuccess and isSuccess):
-                    NotificationServices.sendSlackNotification(slackWebHookUrl, notebookName, isSuccess, message)
+            if slackWebHookUrl and (
+                (isNotifyOnFailure and not isSuccess)
+                or (isNotifyOnSuccess and isSuccess)
+            ):
+                NotificationServices.sendSlackNotification(slackWebHookUrl, notebookName, isSuccess, message)
         except:
             pass
 

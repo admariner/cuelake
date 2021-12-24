@@ -31,7 +31,7 @@ def __handleStaleNotebookJob(notebookRunLog):
             return True
     except Exception as ex:
         # This will be mostly pod not found error
-        logger.info(f"{str(ex)}")
+        logger.info(f'{ex}')
     # Run the job again
     runNotebookJob.delay(notebookId=notebookRunLog.notebookId, notebookRunLogsId=notebookRunLog.id)
 
@@ -48,8 +48,8 @@ def ___checkAndUpdateWorkflowStatus(workflowRunLog):
         workflowRunLog.endTimestamp = datetime.now()
         if workflowRunLog.notebookrunlogs_set.filter(status__in=[STATUS_ERROR, STATUS_ABORTED]).count() == 0:
             workflowRunLog.status = STATUS_SUCCESS
-            workflowRunLog.save()
         else:
             workflowRunLog.status = STATUS_ERROR
-            workflowRunLog.save()
+
+        workflowRunLog.save()
                 

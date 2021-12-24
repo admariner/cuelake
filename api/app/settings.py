@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
+
 import os
 from pathlib import Path
 
@@ -24,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = '91e#h)g93722oz6ut80m4w*5_59%1%td18a08#&x3$^vm_y0g2'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (os.environ.get("DEBUG", False) == 'True' or os.environ.get("DEBUG", False) == 'true')
+DEBUG = os.environ.get("DEBUG", False) in ['True', 'true']
 
 CSRF_TRUSTED_ORIGINS = ["localhost"]
 CORS_ORIGIN_WHITELIST = ["http://localhost:3000"]

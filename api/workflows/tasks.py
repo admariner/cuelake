@@ -22,16 +22,20 @@ def runWorkflowJob(workflowId: int, workflowRunLogsId: int = None):
     :param workflowId: ID of Workflows.workflow model
 	"""
 	try:
-		workflowRunStatus = TaskUtils.runWorkflow(workflowId=workflowId, workflowRunLogsId=workflowRunLogsId, taskId=runWorkflowJob.request.id if runWorkflowJob.request.id else "")
+		workflowRunStatus = TaskUtils.runWorkflow(
+		    workflowId=workflowId,
+		    workflowRunLogsId=workflowRunLogsId,
+		    taskId=runWorkflowJob.request.id or "",
+		)
 		dependentWorkflowIds = list(
-            Workflow.objects.filter(
-                triggerWorkflow_id=workflowId,
-                triggerWorkflowStatus__in=[STATUS_ALWAYS, workflowRunStatus],
-            ).values_list("id", flat=True)
-        )
+		    Workflow.objects.filter(
+		        triggerWorkflow_id=workflowId,
+		        triggerWorkflowStatus__in=[STATUS_ALWAYS, workflowRunStatus],
+		    ).values_list("id", flat=True)
+		)
 		for workflowId in dependentWorkflowIds:
 			workflowRun = WorkflowRunLogs.objects.create(workflow_id=workflowId, status=STATUS_QUEUED)
 			runWorkflowJob.delay(workflowId=workflowId, workflowRunLogsId=workflowRun.id)
 	except Exception as ex:
 		WorkflowRunLogs.objects.filter(id=workflowRunLogsId).update(status=STATUS_ERROR, endTimestamp=dt.datetime.now())
-		print(str(ex))
+		print(ex)

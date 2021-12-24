@@ -112,10 +112,12 @@ class ConnectionDetailSerializer(serializers.ModelSerializer):
     connectionType = serializers.SerializerMethodField()
 
     def get_params(self, obj):
-        params = {}
-        for val in obj.cpvc.all():
-            params[val.connectionParam.name] = val.value if not val.connectionParam.isEncrypted else "**********"
-        return params
+        return {
+            val.connectionParam.name: val.value
+            if not val.connectionParam.isEncrypted
+            else "**********"
+            for val in obj.cpvc.all()
+        }
 
     def get_connectionTypeId(self, obj):
         return obj.connectionType.id
@@ -142,12 +144,14 @@ class ConnectionTypeSerializer(serializers.ModelSerializer):
     def get_params(self, obj):
         paramList = []
         for param in obj.connectionTypeParam.all():
-            params = {}
-            params["id"] = param.id
-            params["name"] = param.name
-            params["label"] = param.label
-            params["isEncrypted"] = param.isEncrypted
-            params["properties"] = param.properties
+            params = {
+                'id': param.id,
+                'name': param.name,
+                'label': param.label,
+                'isEncrypted': param.isEncrypted,
+                'properties': param.properties,
+            }
+
             paramList.append(params)
         return paramList
 
